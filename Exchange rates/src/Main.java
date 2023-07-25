@@ -8,49 +8,79 @@ import java.util.Scanner;
 
 public class Main {
 
-    //адреса для получчения цены всех валют на определенную дату и кода всех валют с расшифровкой
-    public static String priceURL = "https://www.cbr.ru/scripts/XML_daily.asp?date_req=";
+    //адрес для получения xml с ценами и расшифровкой кода валют
+    public static String currencyPriceURL = "https://www.cbr.ru/scripts/XML_daily.asp?date_req=";
+    //формат вводимых данных
+    public static final String DATA_INPUT_FORMAT = "currency_rates\\s\\s*--code=[A-Z]{3}\\s\\s*--date=\\d{4}-\\d{2}-\\d{2}";
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args){
         //получаем сообщение от пользователя в массив строк
-        String[] inputMessage = readMessage("Введите данные в формате: curency_rate --code=CODE --date=YYYY-MM-DD").trim().split(" ");
-        //получаем точный запрос для получения всех валют в дату
-        String[] date = inputMessage[2].replace("--date=", "").split("-");
-        priceURL = priceURL + date[2] + "/" + date[1] + "/" + date[0];
+        String inputMessage = readMessage("Введите данные: ");
 
-        //получаем все курсы по дате
-        String resultAllPrices = Main.sendRequest(priceURL, null, null);
+        //вводем переменные начала и окончания подстроки. Они еще понадобятся
+        int startIndex = 0;
+        int endIndex = 0;
 
-        //получаем из всех крсов по дате нужный для вывода результат
-        String code = inputMessage[1].replace("--code=", "");
-        int indexStart = resultAllPrices.indexOf(code);
-        String subString = resultAllPrices.substring(indexStart);
-        int indexEnd = subString.indexOf("</Value>");
-        subString = subString.substring(0, indexEnd);
-        System.out.println(subString);
-        //теперь отсюда запоминаем название валюты и ее цену
+        //получаем дату в необходимом для завпроса формате
+        startIndex = inputMessage.indexOf("--date=") + 7;
+        String[] date = inputMessage.substring(startIndex).split("-");
+        currencyPriceURL += date[2] + "/" + date[1] + "/" + date[0];
+
+        //получаем строку со всеми данными по дате
+        String allOnDateResults = sendRequest(currencyPriceURL, null, null);
+
+        //получаем код валюты, введенный в консоль
+        startIndex = inputMessage.indexOf("--code=") + 7;
+        endIndex = startIndex + 3;
+        String currencyCode = inputMessage.substring(startIndex, endIndex);
+
+        //выделяем необходимую подстроку из строки результатов по всем валютам
+        startIndex = allOnDateResults.indexOf(currencyCode);
+        String oneCurrencyResult = allOnDateResults.substring(startIndex);
+        endIndex = oneCurrencyResult.indexOf("</Value>");
+        oneCurrencyResult = oneCurrencyResult.substring(0, endIndex);
+
+        //начинаем формировать строку для вывода в консоль
         StringBuilder result = new StringBuilder();
-        result.append(code).append(" (");
-        //получаем название валюты
-        indexStart = subString.indexOf("<Name>") + 6;
-        indexEnd = subString.indexOf("</Name>");
-        result.append(subString.substring(indexStart, indexEnd)).append("): ");
-        //получаем цену валюты
-        indexStart = subString.indexOf("<Value>") + 7;
-        result.append(subString.substring(indexStart));
+        result.append(currencyCode).append(" (");
+        //добавляем в строку для вывода перевод кода валюты
+        startIndex = oneCurrencyResult.indexOf("<Name>") + 6;
+        endIndex = oneCurrencyResult.indexOf("</Name>");
+        result.append(oneCurrencyResult.substring(startIndex, endIndex)).append("): ");
+        //добавляем в строку вывода цену на валюту
+        startIndex = oneCurrencyResult.indexOf("<Value>") + 7;
+        result.append(oneCurrencyResult.substring(startIndex));
+
         System.out.println(result);
-
-
-        //получаем данные от пользователя (консольный ввод)
-        //String data = readMessage("Введите данные в формате: curency_rate --code=CODE --date=YYYY-MM-DD");
 
     }
 
     //метод для получения данных от пользователя (консольный ввод)
-    public static String readMessage(String message) throws IOException {
+    public static String readMessage(String message) {
         System.out.println(message);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        return reader.readLine();
+        //будем использовать Scanner, так как ввод очень короткий
+        Scanner scanner = new Scanner(System.in);
+        while (scanner.hasNext()) {
+            String inputData = scanner.nextLine().trim();
+            if (inputData.isEmpty())
+                continue;
+
+            //проверяем соответствуют ли введенные данные паттерну
+            //если соответствуют, со вводом данных заканчиваем
+            if (inputData.matches(DATA_INPUT_FORMAT))
+            {
+                inputData = inputData.replaceAll("\\s+", "");
+                scanner.close();
+                return inputData;
+            }
+            else
+            {
+                System.out.println("Invalid input data");
+                return readMessage(message);
+            }
+        }
+        System.out.println("input some data");
+        return readMessage(message);
     }
 
     /**
@@ -91,7 +121,7 @@ public class Main {
             }
         }
         catch (Exception e){
-            System.out.println("FAILED");
+            System.out.println("sendRequest faild");
         }
         finally {
             if (urlConnection != null) {
