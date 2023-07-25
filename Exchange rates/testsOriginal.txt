@@ -1,0 +1,12 @@
+currency_rates --code=USD --date=2022-10-08
+		currency_rates 		--code=USD 	--date=2022-10-08		
+currency_rates --code=USD --date=2021-10-08
+currency_rates --code=USD --date=2020-10-08
+currency_rates --code=USD --date=2019-10-08
+currency_rates --code=USD --date=2018-10-08
+currency_rates --code=AUD --date=2002-03-02
+currency_rates --code=XDR --date=2002-03-02
+currency_rates --code=JPY --date=2019-03-02
+currency_rates --code=JPY --date=2024-03-02
+currency_rates --code=JPY --date=2023-08-02
+currency_rates --code=JPY --date=2023-07-25

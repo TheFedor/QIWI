@@ -1,4 +1,5 @@
 import java.io.*;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.net.URL;
 import java.net.HttpURLConnection;
@@ -13,65 +14,132 @@ public class Main {
     //формат вводимых данных
     public static final String DATA_INPUT_FORMAT = "currency_rates\\s\\s*--code=[A-Z]{3}\\s\\s*--date=\\d{4}-\\d{2}-\\d{2}";
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException {
+
+        //создаем заполняем файл, который будет выступать источником запросов во время выполнения программы, из файла первоисточника
+        try {
+            File file = new File("tests.txt");
+            file.createNewFile();
+        }
+        catch (IOException e){
+            System.err.println("Error with file creating: " + e.getMessage());
+        }
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader("testsOriginal.txt"));
+            BufferedWriter writer = new BufferedWriter(new FileWriter("tests.txt"));
+            //переписываем данные из файла-первоисточника
+            String line = "";
+            while ((line = reader.readLine()) != null)
+            {
+                writer.write(line);
+                writer.newLine();
+            }
+
+            reader.close();
+            writer.close();
+
+        }
+        catch (IOException e){
+            System.err.println("Error with file writing: " + e.getMessage());
+        }
+
         //получаем сообщение от пользователя в массив строк
-        String inputMessage = readMessage("Введите данные: ");
+        System.out.println(readMessage("Введите данные: "));
+        System.out.println("\nend");
 
-        //вводем переменные начала и окончания подстроки. Они еще понадобятся
-        int startIndex = 0;
-        int endIndex = 0;
+        //удаляем файл, который выступал источником в программе
+        File file = new File("tests.txt");
+        file.delete();
 
-        //получаем дату в необходимом для завпроса формате
-        startIndex = inputMessage.indexOf("--date=") + 7;
-        String[] date = inputMessage.substring(startIndex).split("-");
-        currencyPriceURL += date[2] + "/" + date[1] + "/" + date[0];
+    }
 
-        //получаем строку со всеми данными по дате
-        String allOnDateResults = sendRequest(currencyPriceURL, null, null);
+    //метод для удаления первой строки из файла
+    public static void removeFirstRowFromFile(String filename) {
+        //создаем полную копию исходного файла
+        String copyFilename = filename + "-copy";
+        try {
+            File fileCopy = new File(copyFilename);
+            fileCopy.createNewFile();
+        }
+        catch (IOException e){
+            System.err.println("Error with file creating: " + e.getMessage());
+        }
 
-        //получаем код валюты, введенный в консоль
-        startIndex = inputMessage.indexOf("--code=") + 7;
-        endIndex = startIndex + 3;
-        String currencyCode = inputMessage.substring(startIndex, endIndex);
+        //переносим все строки, кроме первой, в файл-копию
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(filename));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(copyFilename));
+            //пропускаем первую строку файла-источника
+            reader.readLine();
+            //переписываем оставшиеся данные из файла-источника
+            String line = "";
+            while ((line = reader.readLine()) != null)
+            {
+                writer.write(line);
+                writer.newLine();
+            }
+            reader.close();
+            writer.close();
 
-        //выделяем необходимую подстроку из строки результатов по всем валютам
-        startIndex = allOnDateResults.indexOf(currencyCode);
-        String oneCurrencyResult = allOnDateResults.substring(startIndex);
-        endIndex = oneCurrencyResult.indexOf("</Value>");
-        oneCurrencyResult = oneCurrencyResult.substring(0, endIndex);
+        }
+        catch (IOException e){
+            System.err.println("Error with file writing: " + e.getMessage());
+        }
 
-        //начинаем формировать строку для вывода в консоль
-        StringBuilder result = new StringBuilder();
-        result.append(currencyCode).append(" (");
-        //добавляем в строку для вывода перевод кода валюты
-        startIndex = oneCurrencyResult.indexOf("<Name>") + 6;
-        endIndex = oneCurrencyResult.indexOf("</Name>");
-        result.append(oneCurrencyResult.substring(startIndex, endIndex)).append("): ");
-        //добавляем в строку вывода цену на валюту
-        startIndex = oneCurrencyResult.indexOf("<Value>") + 7;
-        result.append(oneCurrencyResult.substring(startIndex));
+        //удаляем файл-источник и создаем новый пустой файл, который впоследствии будет новым источником
+        File fileSource = new File(filename);
+        fileSource.delete();
+        try {
+            fileSource.createNewFile();
+        }
+        catch (IOException e){
+            System.err.println("Error with file creating: " + e.getMessage());
+        }
 
-        System.out.println(result);
+        //перезаписываем все строки из файла-копии в новый файл-источник
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(copyFilename));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
+
+            //переписываем данные из файла-копии
+            String line = "";
+            while ((line = reader.readLine()) != null)
+            {
+                writer.write(line);
+                writer.newLine();
+            }
+            reader.close();
+            writer.close();
+
+        }
+        catch (IOException e){
+            System.err.println("Error with file writing: " + e.getMessage());
+        }
+
+        //удаляем файл-копию
+        File fileCopy = new File(copyFilename);
+        fileCopy.delete();
 
     }
 
     //метод для получения данных от пользователя (консольный ввод)
-    public static String readMessage(String message) {
+    public static String readMessage(String message) throws IOException {
         System.out.println(message);
         //будем использовать Scanner, так как ввод очень короткий
-        Scanner scanner = new Scanner(System.in);
-        while (scanner.hasNext()) {
+        Scanner scanner = new Scanner(Paths.get("tests.txt"));
+        if (scanner.hasNext()) {
             String inputData = scanner.nextLine().trim();
-            if (inputData.isEmpty())
-                continue;
 
             //проверяем соответствуют ли введенные данные паттерну
             //если соответствуют, со вводом данных заканчиваем
             if (inputData.matches(DATA_INPUT_FORMAT))
             {
                 inputData = inputData.replaceAll("\\s+", "");
+                resultOutput(inputData);
+                //удаляем прочитанную строку из файла. Если мы здесь, то она гарантированно есть
+                removeFirstRowFromFile("tests.txt");
                 scanner.close();
-                return inputData;
+                return readMessage(message);
             }
             else
             {
@@ -79,8 +147,8 @@ public class Main {
                 return readMessage(message);
             }
         }
-        System.out.println("input some data");
-        return readMessage(message);
+        //здесь теперь не вызываем повторно метод, а завершаем работу, так как данных больше нет
+        return "dataset is empty";
     }
 
     /**
@@ -129,6 +197,87 @@ public class Main {
             }
         }
         return result;
+    }
+
+    //метод для получения и вывода результата
+    public static void resultOutput(String inputMessage)
+    {
+        System.out.println("inputMessage: " + inputMessage);
+        //вводем переменные начала и окончания подстроки. Они еще понадобятся
+        int startIndex = 0;
+        int endIndex = 0;
+
+        //получаем дату в необходимом для завпроса формате
+        startIndex = inputMessage.indexOf("--date=") + 7;
+        String[] date = inputMessage.substring(startIndex).split("-");
+        //меняем данные даты на последний существующий день, если они больше
+        if (Integer.valueOf(date[0]) > 2023)
+        {
+            date[0] = "2023";
+            if (Integer.valueOf(date[1]) > 7)
+            {
+                date[1] = "07";
+                if(Integer.valueOf(date[2]) > 25)
+                {
+                    date[2] = "25";
+                }
+            }
+            else if (Integer.valueOf(date[1]) == 7)
+            {
+                if(Integer.valueOf(date[2]) > 25)
+                {
+                    date[2] = "25";
+                }
+            }
+        }
+        else if (Integer.valueOf(date[0]) == 2023)
+        {
+            if (Integer.valueOf(date[1]) > 7)
+            {
+                date[1] = "07";
+                if(Integer.valueOf(date[2]) > 25)
+                {
+                    date[2] = "25";
+                }
+            }
+            else if (Integer.valueOf(date[1]) == 7)
+            {
+                if(Integer.valueOf(date[2]) > 25)
+                {
+                    date[2] = "25";
+                }
+            }
+        }
+
+        //получаем полноценный запрос на данные по дате
+        String localPriceURL = currencyPriceURL + date[2] + "/" + date[1] + "/" + date[0];
+
+        //получаем строку со всеми данными по дате
+        String allOnDateResults = sendRequest(localPriceURL, null, null);
+
+        //получаем код валюты, введенный в консоль
+        startIndex = inputMessage.indexOf("--code=") + 7;
+        endIndex = startIndex + 3;
+        String currencyCode = inputMessage.substring(startIndex, endIndex);
+
+        //выделяем необходимую подстроку из строки результатов по всем валютам
+        startIndex = allOnDateResults.indexOf(currencyCode);
+        String oneCurrencyResult = allOnDateResults.substring(startIndex);
+        endIndex = oneCurrencyResult.indexOf("</Value>");
+        oneCurrencyResult = oneCurrencyResult.substring(0, endIndex);
+
+        //начинаем формировать строку для вывода в консоль
+        StringBuilder result = new StringBuilder();
+        result.append(currencyCode).append(" (");
+        //добавляем в строку для вывода перевод кода валюты
+        startIndex = oneCurrencyResult.indexOf("<Name>") + 6;
+        endIndex = oneCurrencyResult.indexOf("</Name>");
+        result.append(oneCurrencyResult.substring(startIndex, endIndex)).append("): ");
+        //добавляем в строку вывода цену на валюту
+        startIndex = oneCurrencyResult.indexOf("<Value>") + 7;
+        result.append(oneCurrencyResult.substring(startIndex));
+
+        System.out.println(result);
     }
 
     private static String getStringFromStream(InputStream inputStream) throws IOException {
