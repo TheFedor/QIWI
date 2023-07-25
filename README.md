@@ -10,6 +10,6 @@
 
 ### **NOT ON TIME:**        
 
-4) **Name of commit - some tests and new methods for creating and reading test files:** the fourth commit with the addition of some tests, but with tests it is easier to check the work (and the option with input from the console lies in the second commit).                                
+4) **Name of commit - some tests and new methods for creating and reading test files:** the fourth commit with the addition of some tests, but with tests it is easier to check the work (and the option with input from the console lies in the third commit).                                
 
 5+) several commits after - upgrade README.md 
